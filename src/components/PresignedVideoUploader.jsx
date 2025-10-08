@@ -13,50 +13,50 @@ const PresignedVideoUploader = ({ videoUrl, onUploadComplete, onUploadStart, onU
     setUploadedUrl(videoUrl || "");
   }, [videoUrl]);
 
- const handlePresignedUpload = async () => {
-  if (!videoFile) return showErrorToast("Please select a video first!");
+  const handlePresignedUpload = async () => {
+    if (!videoFile) return showErrorToast("Please select a video first!");
 
-  try {
-    setLoading(true);
-    onUploadStart && onUploadStart(); // Notify parent upload started
+    try {
+      setLoading(true);
+      onUploadStart && onUploadStart(); // Notify parent upload started
 
-    // 🔹 Sanitize filename before upload
-    const sanitizedFileName = videoFile.name
-      .replace(/\s+/g, "_")        // Replace spaces with underscores
-      .replace(/[^\w.-]/g, "");    // Remove any unsafe characters
+      // 🔹 Sanitize filename before upload
+      const sanitizedFileName = videoFile.name
+        .replace(/\s+/g, "_")        // Replace spaces with underscores
+        .replace(/[^\w.-]/g, "");    // Remove any unsafe characters
 
-    // 🔹 Create a new File object with cleaned name
-    const cleanedFile = new File([videoFile], sanitizedFileName, { type: videoFile.type });
+      // 🔹 Create a new File object with cleaned name
+      const cleanedFile = new File([videoFile], sanitizedFileName, { type: videoFile.type });
 
-    // 🔹 Request a pre-signed URL using the cleaned file
-    const presignedUrl = await getVideoPresignedUrl(cleanedFile);
-    if (!presignedUrl) throw new Error("Failed to get pre-signed URL");
+      // 🔹 Request a pre-signed URL using the cleaned file
+      const presignedUrl = await getVideoPresignedUrl(cleanedFile);
+      if (!presignedUrl) throw new Error("Failed to get pre-signed URL");
 
-    // 🔹 Upload to S3
-    const uploadRes = await fetch(presignedUrl, {
-      method: "PUT",
-      body: cleanedFile,
-      headers: {
-        "Content-Type": cleanedFile.type,
-      },
-    });
+      // 🔹 Upload to S3
+      const uploadRes = await fetch(presignedUrl, {
+        method: "PUT",
+        body: cleanedFile,
+        headers: {
+          "Content-Type": cleanedFile.type,
+        },
+      });
 
-    if (!uploadRes.ok) throw new Error("Upload failed");
+      if (!uploadRes.ok) throw new Error("Upload failed");
 
-    // 🔹 Extract final URL (without query params)
-    const finalUrl = presignedUrl.split("?")[0];
-    setUploadedUrl(finalUrl);
-    onUploadComplete && onUploadComplete(finalUrl);
+      // 🔹 Extract final URL (without query params)
+      const finalUrl = presignedUrl.split("?")[0];
+      setUploadedUrl(finalUrl);
+      onUploadComplete && onUploadComplete(finalUrl);
 
-    showSuccessToast("Video uploaded successfully!");
-  } catch (error) {
-    console.error("Video upload error:", error);
-    onUploadError && onUploadError();
-    showErrorToast(error.message || "Something went wrong during upload");
-  } finally {
-    setLoading(false);
-  }
-};
+      showSuccessToast("Video uploaded successfully!");
+    } catch (error) {
+      console.error("Video upload error:", error);
+      onUploadError && onUploadError();
+      showErrorToast(error.message || "Something went wrong during upload");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -89,7 +89,7 @@ const PresignedVideoUploader = ({ videoUrl, onUploadComplete, onUploadStart, onU
             <button
               className="px-4 py-2 bg-[#ff6f3c] hover:bg-[#ff6f4c] text-white rounded-lg font-medium"
               onClick={() => {
-                onUploadComplete(null); 
+                onUploadComplete(null);
                 setVideoFile(null);
                 setUploadedUrl("");
               }}
@@ -119,10 +119,15 @@ const PresignedVideoUploader = ({ videoUrl, onUploadComplete, onUploadStart, onU
       {uploadedUrl && (
         <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm transition-all hover:shadow-md">
           <video
-            src={uploadedUrl.includes("http") ? uploadedUrl : `https://trade-pilot-bucket.s3.eu-north-1.amazonaws.com/${uploadedUrl}`}
+            src={
+              uploadedUrl.includes("http")
+                ? encodeURI(uploadedUrl)
+                : `https://trade-pilot-bucket.s3.eu-north-1.amazonaws.com/${encodeURI(uploadedUrl)}`
+            }
             controls
             className="w-full rounded-lg shadow-lg"
           />
+
           <p className="text-xs text-gray-500 break-all mt-2">
             <strong>URL:</strong> {uploadedUrl}
           </p>
